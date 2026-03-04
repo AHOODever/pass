@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>بوابة التحضير الذكية</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; border-radius: 15px; overflow: hidden; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.2em; display: none; }
+    </style>
+</head>
+<body>
+    <h2>نظام تحضير الفعاليات 🎟️</h2>
+    <div id="reader"></div>
+    <div id="result"></div>
+
+    <script>
+        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        
+        function onScanSuccess(decodedText) {
+            scanner.pause(); // نوقف الكاميرا شوي عشان ما يمسح مرتين
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = "جاري التحقق...⏳";
+            resultDiv.style.background = "#eee";
+
+            // إرسال البيانات لـ n8n
+            fetch('http://localhost:5678/webhook/gate-checkin?ticket_id=' + decodedText, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultDiv.innerHTML = data.message;
+                resultDiv.style.background = data.color === 'green' ? '#d4edda' : '#f8d7da';
+                resultDiv.style.color = data.color === 'green' ? '#155724' : '#721c24';
+                
+                // إعادة تشغيل الكاميرا بعد 3 ثواني
+                setTimeout(() => { 
+                    scanner.resume(); 
+                    resultDiv.style.display = 'none';
+                }, 3000);
+            });
+        }
+
+        scanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
