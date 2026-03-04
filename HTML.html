@@ -25,7 +25,7 @@
             resultDiv.style.background = "#eee";
 
             // إرسال البيانات لـ n8n
-            fetch('http://localhost:5678/webhook/gate-checkin?ticket_id=' + decodedText, {
+            fetch('https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev/webhook/gate-checkin' + decodedText, {
                 method: 'POST'
             })
             .then(response => response.json())
@@ -45,4 +45,5 @@
         scanner.render(onScanSuccess);
     </script>
 </body>
+
 </html>
