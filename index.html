@@ -1,50 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-    <title>بوابة التحضير الذكية</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة الدخول | لوحة المنظمين</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: auto; border-radius: 15px; overflow: hidden; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.2em; display: none; }
+        :root { --primary: #10b981; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 400px; background: var(--card); padding: 2rem; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); text-align: center; border: 1px solid #334155; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .stats-badge { background: #334155; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.8rem; }
+        .stats-count { color: var(--primary); font-weight: bold; display: block; font-size: 1.2rem; }
+        #reader { width: 100%; border-radius: 16px; overflow: hidden; border: 2px solid #334155; position: relative; }
+        #reader__scan_region { background: #000; }
+        .status-msg { margin-top: 1.5rem; padding: 1rem; border-radius: 12px; font-weight: 600; display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        h2 { font-size: 1.25rem; margin: 1rem 0 0.5rem; }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
     </style>
 </head>
 <body>
-    <h2>نظام تحضير الفعاليات 🎟️</h2>
-    <div id="reader"></div>
-    <div id="result"></div>
+    <div class="container">
+        <div class="header">
+            <div class="stats-badge">تم المسح <span id="scanCount" class="stats-count">0</span></div>
+            <div style="color: var(--primary)">Entrance Gate</div>
+        </div>
+        
+        <div id="reader"></div>
+        
+        <h2>امسح الباركود للدخول</h2>
+        <p>وجه الكاميرا نحو باركود التذكرة</p>
+        
+        <div id="status" class="status-msg"></div>
+    </div>
 
     <script>
-        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        let count = 0;
+        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
         
         function onScanSuccess(decodedText) {
-            scanner.pause(); // نوقف الكاميرا شوي عشان ما يمسح مرتين
-            const resultDiv = document.getElementById('result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = "جاري التحقق...⏳";
-            resultDiv.style.background = "#eee";
+            scanner.pause();
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#334155';
+            statusDiv.innerHTML = "جاري التحقق... ⏳";
 
-            // إرسال البيانات لـ n8n
-            fetch('https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev/webhook/gate-checkin' + decodedText, {
-                method: 'POST'
-            })
-            .then(response => response.json())
+            // استخدمي رابط ngrok الخاص بك هنا
+            const webhookUrl = 'https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev/webhook/gate-checkin';
+
+            fetch(`${webhookUrl}?ticket_id=${decodedText}`, { method: 'POST' })
+            .then(res => res.json())
             .then(data => {
-                resultDiv.innerHTML = data.message;
-                resultDiv.style.background = data.color === 'green' ? '#d4edda' : '#f8d7da';
-                resultDiv.style.color = data.color === 'green' ? '#155724' : '#721c24';
+                statusDiv.innerHTML = data.message;
+                if(data.color === 'green') {
+                    statusDiv.style.background = '#065f46';
+                    count++;
+                    document.getElementById('scanCount').innerText = count;
+                } else {
+                    statusDiv.style.background = '#7f1d1d';
+                }
                 
-                // إعادة تشغيل الكاميرا بعد 3 ثواني
                 setTimeout(() => { 
+                    statusDiv.style.display = 'none';
                     scanner.resume(); 
-                    resultDiv.style.display = 'none';
                 }, 3000);
+            })
+            .catch(err => {
+                statusDiv.innerHTML = "خطأ في الاتصال بالخادم ❌";
+                statusDiv.style.background = '#7f1d1d';
+                setTimeout(() => scanner.resume(), 3000);
             });
         }
 
         scanner.render(onScanSuccess);
     </script>
 </body>
-
 </html>
-
