@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizers Panel</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #111;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== SHARED ===== */
+        .page { display: none; width: 100%; }
+        .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; }
+
+        .logo-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .logo-icon {
+            width: 38px; height: 38px;
+            background: #222; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+        .logo-header span { color: #fff; font-size: 15px; font-weight: 600; }
+        .logo-header small { display: block; color: #666; font-size: 11px; }
+
+        /* ===== LOGIN PAGE ===== */
+        .login-box {
+            background: #1a1a1a; border: 1px solid #2a2a2a;
+            border-radius: 14px; padding: 30px;
+            width: min(420px, 100%);
+        }
+        .login-box h2 { color: #fff; margin-bottom: 6px; }
+        .login-box p { color: #666; font-size: 13px; margin-bottom: 25px; }
+        .field { margin-bottom: 18px; }
+        .field label { display: block; color: #888; font-size: 12px; margin-bottom: 7px; }
+        .field input {
+            width: 100%; padding: 12px; background: #222;
+            border: 1px solid #2e2e2e; border-radius: 8px;
+            color: #fff; outline: none;
+        }
+        .login-btn {
+            width: 100%; padding: 13px; background: #e04040;
+            color: #fff; border: none; border-radius: 8px;
+            font-weight: 600; cursor: pointer;
+        }
+
+        /* ===== STATS SECTION ===== */
+        .stats-container {
+            display: none; width: min(420px, 100%);
+            display: flex; gap: 10px; margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1a1a1a; border: 1px solid #2a2a2a;
+            padding: 15px; border-radius: 12px; flex: 1; text-align: center;
+        }
+        .stat-card small { color: #888; display: block; font-size: 11px; margin-bottom: 5px; }
+        .stat-card span { color: #fff; font-size: 20px; font-weight: bold; }
+
+        /* ===== SCANNER PAGE ===== */
+        .scanner-box { width: min(420px, 100%); text-align: center; }
+        #reader { width: 100%; border-radius: 12px; border: 2px solid #2a2a2a; overflow: hidden; background: #000; }
+        
+        .result-card {
+            margin-top: 20px; padding: 18px; border-radius: 10px; display: none;
+        }
+        .result-card.success { background: #0d2b1a; border: 1px solid #1a5c33; }
+        .result-card.error   { background: #2b0d0d; border: 1px solid #5c1a1a; }
+        .result-card.warning { background: #2b220d; border: 1px solid #5c4a1a; }
+        .result-card .result-title { font-weight: 700; margin-bottom: 4px; }
+        .result-card.success .result-title { color: #4ade80; }
+        .result-card.error   .result-title { color: #f87171; }
+        .result-card.warning .result-title { color: #fbbf24; }
+
+        .logout-btn {
+            margin-top: 25px; background: none; border: none;
+            color: #555; cursor: pointer; text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page active" id="login-page">
+        <div class="logo-header">
+            <div class="logo-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 22,7 22,17 12,22 2,17 2,7"/></svg></div>
+            <span>Entrance gate <small>Organizers' Panel</small></span>
+        </div>
+        <div class="login-box">
+            <h2>Login</h2>
+            <p>Enter your organizer credentials</p>
+            <div class="field">
+                <label>Email Address</label>
+                <input type="email" id="org-email" placeholder="admin@event.com">
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="org-password" placeholder="••••••••">
+            </div>
+            <button class="login-btn" onclick="doLogin()">Submit</button>
+            <div class="error-msg" id="login-error" style="color:red; display:none; margin-top:10px;">❌ Invalid credentials.</div>
+        </div>
+    </div>
+
+    <div class="page" id="scanner-page">
+        <div class="logo-header">
+            <div class="logo-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 22,7 22,17 12,22 2,17 2,7"/></svg></div>
+            <span>Entrance gate <small>Organizers' Panel</small></span>
+        </div>
+
+        <div class="stats-container" id="stats-container">
+            <div class="stat-card">
+                <small>Total Registered</small>
+                <span id="total-attendees">0</span>
+            </div>
+            <div class="stat-card">
+                <small>Checked In</small>
+                <span id="present-attendees" style="color: #4ade80;">0</span>
+            </div>
+        </div>
+
+        <div class="scanner-box">
+            <h2 style="color:white; margin-bottom:10px;">Scanner Active</h2>
+            <div id="reader"></div>
+
+            <div class="result-card" id="result-card">
+                <div class="icon" id="result-icon"></div>
+                <div class="result-title" id="result-title"></div>
+                <div class="result-sub" id="result-sub" style="color:#888;"></div>
+                <button style="margin-top:10px; padding:8px 15px;" onclick="scanAgain()">Scan Next</button>
+            </div>
+        </div>
+
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+    <script>
+        const BASE_URL = "https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev/";
+        let scanner = null;
+
+        // 1. جلب الإحصائيات
+        async function updateStats() {
+            const token = localStorage.getItem('orgToken');
+            try {
+                const res = await fetch(`${BASE_URL}/stats`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('stats-container').style.display = 'flex';
+                    document.getElementById('total-attendees').innerText = data.total;
+                    document.getElementById('present-attendees').innerText = data.present;
+                }
+            } catch (err) { console.error("Stats Error:", err); }
+        }
+
+        // 2. تسجيل الدخول
+        async function doLogin() {
+            const email = document.getElementById('org-email').value.trim();
+            const password = document.getElementById('org-password').value;
+
+            try {
+                const res = await fetch(`${BASE_URL}/organizer-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('orgToken', data.token);
+                    document.getElementById('login-page').classList.remove('active');
+                    document.getElementById('scanner-page').classList.add('active');
+                    updateStats();
+                    startScanner();
+                } else {
+                    document.getElementById('login-error').style.display = 'block';
+                }
+            } catch(err) { alert("Server connection failed"); }
+        }
+
+        // 3. تشغيل الماسح
+        function startScanner() {
+            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            scanner.render(onScanSuccess, (err) => {});
+        }
+
+        // 4. عند نجاح المسح
+        async function onScanSuccess(decodedText) {
+            scanner.pause();
+            const token = localStorage.getItem('orgToken');
+
+            try {
+                const res = await fetch(`${BASE_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ qrKey: decodedText })
+                });
+
+                const data = await res.json();
+                
+                if (res.status === 401 || res.status === 403) {
+                    alert("Session expired. Please login again.");
+                    logout();
+                    return;
+                }
+
+                showResult({
+                    success: data.status === 'success',
+                    already_checked: data.status === 'warning',
+                    name: data.name,
+                    message: data.message
+                });
+
+                // تحديث الأرقام فوراً بعد المسح الناجح
+                updateStats();
+
+            } catch(err) {
+                showResult({ success: false, message: "Connection Error" });
+            }
+        }
+
+        function showResult(data) {
+            const card = document.getElementById('result-card');
+            const title = document.getElementById('result-title');
+            const sub = document.getElementById('result-sub');
+            const icon = document.getElementById('result-icon');
+
+            card.className = 'result-card';
+            card.style.display = 'block';
+
+            if (data.success) {
+                card.classList.add('success');
+                icon.innerText = "✅";
+                title.innerText = "Success!";
+                sub.innerText = "Welcome, " + (data.name || "");
+            } else if (data.already_checked) {
+                card.classList.add('warning');
+                icon.innerText = "⚠️";
+                title.innerText = "Already Entered";
+                sub.innerText = data.name + " is already inside.";
+            } else {
+                card.classList.add('error');
+                icon.innerText = "❌";
+                title.innerText = "Invalid Ticket";
+                sub.innerText = data.message || "Not found.";
+            }
+        }
+
+        function scanAgain() {
+            document.getElementById('result-card').style.display = 'none';
+            if (scanner) scanner.resume();
+        }
+
+        function logout() {
+            localStorage.removeItem('orgToken');
+            location.reload();
+        }
+
+        // جلب الإحصائيات إذا كان مسجل دخول مسبقاً
+        window.onload = () => {
+            if(localStorage.getItem('orgToken')) {
+                document.getElementById('login-page').classList.remove('active');
+                document.getElementById('scanner-page').classList.add('active');
+                updateStats();
+                startScanner();
+            }
+        }
+    </script>
+</body>
+</html>
