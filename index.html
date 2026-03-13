@@ -89,6 +89,14 @@
         }
 
         /* ===== SUCCESS PAGE ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
         #success-page {
             display: none;
             flex-direction: column;
@@ -127,8 +135,81 @@
             font-weight: 600;
             line-height: 1.6;
         }
+    </style>
+</head>
+<body>
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to   { opacity: 1; transform: translateY(0); }
+    <!-- صفحة الفورم -->
+    <div id="form-page">
+        <div class="top-section"></div>
+
+        <div class="form-container">
+            <div class="event-title">EVENT</div>
+
+<form id="myForm" action="https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev" method="POST">
+                <div class="input-group">
+                    <label for="fName">Enter Your Full Name: <span>*</span></label>
+                    <input type="text" id="fName" name="Customer_Name" required placeholder="Enter your name">
+                </div>
+
+                <div class="input-group">
+                    <label for="email">Enter Your Email: <span>*</span></label>
+                    <input type="email" id="email" name="Email" required placeholder="example@email.com">
+                </div>
+
+                <input type="submit" value="Submit" class="submit-btn">
+            </form>
+        </div>
+    </div>
+
+    <div id="success-page">
+        <div class="success-circle">
+            <svg viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+        <div class="success-title">
+            Thanks for completing this form!<br>
+            Your ticket will be send to your Email
+        </div>
+    </div>
+
+<script>
+    document.getElementById('myForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        
+        const name = document.getElementById('fName').value;
+        const email = document.getElementById('email').value;
+
+        
+        const data = {
+            name: name,
+            email: email,
+            phone: "" 
+        };
+
+        try {
+            const response = await fetch(this.action, { 
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data) 
+            });
+
+            if (response.ok) {
+                document.getElementById('form-page').style.display = 'none';
+                document.getElementById('success-page').style.display = 'flex';
+            } else {
+                const errData = await response.json();
+                alert("خطأ: " + (errData.error || "Registration failed"));
+            }
+        } catch(err) {
+            alert("Unable to connect to the server. Please ensure that node index.js is running.");
         }
+    });
+</script>
+
+</body>
+</html>
