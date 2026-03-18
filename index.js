@@ -1,16 +1,28 @@
 const express = require('express');
 const qrcode = require('qrcode');
-const db = require('./db');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose(); // تم استبدال mysql بـ sqlite3
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname)));
 
-const SECRET_KEY = "Event_Gate_Key_2026"; // مفتاح تشفير التوكن
+const SECRET_KEY = "Event_Gate_Key_2026";
+
+// --- إعداد قاعدة بيانات SQLite المحلية ---
+// سيتم إنشاء ملف باسم database.sqlite في مجلد المشروع تلقائياً
+const db = new sqlite3.Database('./database.sqlite', (err) => {
+    if (err) {
+        console.error('خطأ في فتح قاعدة البيانات:', err.message);
+    } else {
+        console.log('متصل بقاعدة بيانات SQLite المحلية بنجاح! 📂');
+    }
+});
 
 // --- إعداد مرسل الإيميلات ---
 const transporter = nodemailer.createTransport({
@@ -21,7 +33,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// --- Middleware للتحقق من هوية المنظم ---
+// --- Middleware للتحقق من التوكن ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -29,7 +41,7 @@ const authenticateToken = (req, res, next) => {
     if (!token) return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ message: "جلسة انتهت، سجل دخولك مرة أخرى" });
+        if (err) return res.status(403).json({ message: "جلسة انتهت" });
         req.user = user;
         next();
     });
@@ -38,126 +50,121 @@ const authenticateToken = (req, res, next) => {
 // 1. تسجيل الحضور (العام)
 app.post('/register', async (req, res) => {
     const { name, email, phone } = req.body;
-    try {
-        const qrKey = `EVT-${Date.now()}`;
-        await db.execute(
-            'INSERT INTO attendees (name, email, phone, qr_code_key) VALUES (?, ?, ?, ?)',
-            [name, email, phone, qrKey]
-        );
+    const qrKey = `EVT-${Date.now()}`;
 
-        const qrImage = await qrcode.toDataURL(qrKey);
-        const base64Data = qrImage.replace(/^data:image\/png;base64,/, "");
+    const sql = 'INSERT INTO attendees (name, email, phone, qr_code_key) VALUES (?, ?, ?, ?)';
+    db.run(sql, [name, email, phone, qrKey], async function(err) {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "الإيميل مسجل مسبقاً أو حدث خطأ داخلي" });
+        }
 
-        const mailOptions = {
-            from: '"فريق تنظيم الفعالية" <Ahoodyoou@gmail.com>',
-            to: email,
-            subject: 'تذكرتك الرسمية للفعالية 🎫',
-            html: `
-                <div style="direction: rtl; text-align: center; font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-                    <h2 style="color: #444;">أهلاً بك يا ${name}!</h2>
-                    <img src="cid:qrcodeimage" alt="QR Code" style="width: 200px; height: 200px;" />
-                    <p><strong>رمز التذكرة:</strong> ${qrKey}</p>
-                </div>`,
-            attachments: [{ filename: 'ticket-qr.png', content: base64Data, encoding: 'base64', cid: 'qrcodeimage' }]
-        };
+        try {
+            const qrImage = await qrcode.toDataURL(qrKey);
+            const base64Data = qrImage.replace(/^data:image\/png;base64,/, "");
 
-        await transporter.sendMail(mailOptions);
-        res.status(201).json({ message: "تم التسجيل وإرسال التذكرة!" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "حدث خطأ أثناء التسجيل" });
-    }
+            const mailOptions = {
+                from: '"فريق تنظيم الفعالية" <Ahoodyoou@gmail.com>',
+                to: email,
+                subject: 'تذكرتك الرسمية للفعالية 🎫',
+                html: `
+                    <div style="direction: rtl; text-align: center; font-family: Arial, sans-serif;">
+                        <h2 style="color: #444;">أهلاً بك يا ${name}!</h2>
+                        <img src="cid:qrcodeimage" alt="QR Code" style="width: 200px; height: 200px;" />
+                        <p><strong>رمز التذكرة:</strong> ${qrKey}</p>
+                    </div>`,
+                attachments: [{ filename: 'ticket-qr.png', content: base64Data, encoding: 'base64', cid: 'qrcodeimage' }]
+            };
+
+            await transporter.sendMail(mailOptions);
+            res.status(201).json({ message: "تم التسجيل وإرسال التذكرة!" });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "فشل إرسال الإيميل" });
+        }
+    });
 });
 
-// 2. إنشاء حساب منظم جديد (يستخدم مرة واحدة لإضافة المسؤولين)
+// 2. إنشاء حساب منظم
 app.post('/organizer-signup', async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        await db.execute('INSERT INTO organizers (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
-        res.json({ success: true, message: "تم إنشاء حساب المنظم" });
+        const sql = 'INSERT INTO organizers (name, email, password) VALUES (?, ?, ?)';
+        db.run(sql, [name, email, hashedPassword], (err) => {
+            if (err) return res.status(500).json({ error: "الإيميل مسجل مسبقاً" });
+            res.json({ success: true, message: "تم إنشاء حساب المنظم" });
+        });
     } catch (error) {
-        res.status(500).json({ error: "الإيميل مسجل مسبقاً" });
+        res.status(500).json({ error: "خطأ في التشفير" });
     }
 });
 
-// 3. دخول المنظم (بإستخدام bcrypt و JWT)
-app.post('/organizer-login', async (req, res) => {
+// 3. دخول المنظم
+app.post('/organizer-login', (req, res) => {
     const { email, password } = req.body;
-    try {
-        const [rows] = await db.execute('SELECT * FROM organizers WHERE email = ?', [email]);
-        if (rows.length === 0) return res.status(401).json({ success: false, message: "المستخدم غير موجود" });
+    db.get('SELECT * FROM organizers WHERE email = ?', [email], async (err, user) => {
+        if (err || !user) return res.status(401).json({ success: false, message: "المستخدم غير موجود" });
 
-        const match = await bcrypt.compare(password, rows[0].password);
+        const match = await bcrypt.compare(password, user.password);
         if (match) {
-            const token = jwt.sign({ id: rows[0].id, email: rows[0].email }, SECRET_KEY, { expiresIn: '24h' });
-            res.json({ success: true, token, name: rows[0].name });
+            const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '24h' });
+            res.json({ success: true, token, name: user.name });
         } else {
             res.status(401).json({ success: false, message: "كلمة المرور خاطئة" });
         }
-    } catch (error) {
-        res.status(500).json({ error: "خطأ في السيرفر" });
-    }
+    });
 });
 
-// 4. التحقق عند البوابة (محمي بـ JWT)
-app.post('/verify', authenticateToken, async (req, res) => {
+// 4. التحقق عند البوابة
+app.post('/verify', authenticateToken, (req, res) => {
     const { qrKey } = req.body;
-    try {
-        const [rows] = await db.execute('SELECT * FROM attendees WHERE qr_code_key = ?', [qrKey]);
-        if (rows.length === 0) return res.status(404).json({ status: 'error', message: 'تذكرة غير صالحة!' });
+    db.get('SELECT * FROM attendees WHERE qr_code_key = ?', [qrKey], (err, attendee) => {
+        if (err || !attendee) return res.status(404).json({ status: 'error', message: 'تذكرة غير صالحة!' });
 
-        const attendee = rows[0];
         if (attendee.is_checked_in) {
-            return res.status(400).json({ status: 'warning', message: `تم الدخول مسبقاً`, name: attendee.name });
+            return res.json({ status: 'warning', message: `تم الدخول مسبقاً`, name: attendee.name });
         }
 
-        await db.execute('UPDATE attendees SET is_checked_in = true, check_in_time = NOW() WHERE qr_code_key = ?', [qrKey]);
-        res.json({ status: 'success', success: true, message: `تم تسجيل الدخول!`, name: attendee.name });
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: 'خطأ في السيرفر' });
-    }
+        db.run('UPDATE attendees SET is_checked_in = 1, check_in_time = CURRENT_TIMESTAMP WHERE qr_code_key = ?', [qrKey], (err) => {
+            if (err) return res.status(500).json({ status: 'error', message: 'خطأ في التحديث' });
+            res.json({ status: 'success', success: true, message: `تم تسجيل الدخول!`, name: attendee.name });
+        });
+    });
 });
 
-// 5. API للإحصائيات (للوحة التحكم)
-app.get('/stats', authenticateToken, async (req, res) => {
-    try {
-        const [total] = await db.execute('SELECT COUNT(*) as count FROM attendees');
-        const [present] = await db.execute('SELECT COUNT(*) as count FROM attendees WHERE is_checked_in = true');
-        res.json({ total: total[0].count, present: present[0].count });
-    } catch (error) {
-        res.status(500).send("خطأ");
-    }
+// 5. الإحصائيات
+app.get('/stats', authenticateToken, (req, res) => {
+    db.get('SELECT COUNT(*) as total FROM attendees', (err, rowTotal) => {
+        db.get('SELECT COUNT(*) as present FROM attendees WHERE is_checked_in = 1', (err, rowPresent) => {
+            if (err) return res.status(500).send("خطأ");
+            res.json({ total: rowTotal.total, present: rowPresent.present });
+        });
+    });
 });
 
-app.listen(3000, async () => {
-    console.log('السيرفر شغال.. جاري التأكد من الجداول السحابية...');
-    try {
-        // إنشاء جدول الحضور إذا لم يكن موجوداً
-        await db.execute(`
-            CREATE TABLE IF NOT EXISTS attendees (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                phone VARCHAR(20),
-                qr_code_key VARCHAR(255) UNIQUE NOT NULL, 
-                is_checked_in BOOLEAN DEFAULT FALSE,
-                check_in_time DATETIME NULL             
-            )
-        `);
+// --- تهيئة الجداول عند التشغيل ---
+db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS attendees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        phone TEXT,
+        qr_code_key TEXT UNIQUE NOT NULL,
+        is_checked_in INTEGER DEFAULT 0,
+        check_in_time TEXT
+    )`);
 
-        // إنشاء جدول المنظمين إذا لم يكن موجوداً
-        await db.execute(`
-            CREATE TABLE IF NOT EXISTS organizers (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('تم فحص الجداول السحابية بنجاح! 🚀');
-    } catch (err) {
-        console.error('خطأ في تهيئة الجداول:', err);
-    }
+    db.run(`CREATE TABLE IF NOT EXISTS organizers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('الجداول المحلية جاهزة! 🚀');
+});
+
+app.listen(3000, () => {
+    console.log('السيرفر شغال على http://localhost:3000');
 });
