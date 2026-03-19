@@ -3,77 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organizers Panel</title>
+    <title>Organizers Panel - Stable</title>
     <style>
+        /* حافظت على جميع الستاييل الخاص بك ليبقى التصميم كما هو */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #111;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* ===== SHARED ===== */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #111; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         .page { display: none; width: 100%; }
         .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; }
-
-        .logo-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        .logo-icon {
-            width: 38px; height: 38px;
-            background: #222; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .logo-header { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+        .logo-icon { width: 38px; height: 38px; background: #222; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
         .logo-header span { color: #fff; font-size: 15px; font-weight: 600; }
         .logo-header small { display: block; color: #666; font-size: 11px; }
-
-        /* ===== LOGIN PAGE ===== */
-        .login-box {
-            background: #1a1a1a; border: 1px solid #2a2a2a;
-            border-radius: 14px; padding: 30px;
-            width: min(420px, 100%);
-        }
+        .login-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 30px; width: min(420px, 100%); }
         .login-box h2 { color: #fff; margin-bottom: 6px; }
         .login-box p { color: #666; font-size: 13px; margin-bottom: 25px; }
         .field { margin-bottom: 18px; }
         .field label { display: block; color: #888; font-size: 12px; margin-bottom: 7px; }
-        .field input {
-            width: 100%; padding: 12px; background: #222;
-            border: 1px solid #2e2e2e; border-radius: 8px;
-            color: #fff; outline: none;
-        }
-        .login-btn {
-            width: 100%; padding: 13px; background: #e04040;
-            color: #fff; border: none; border-radius: 8px;
-            font-weight: 600; cursor: pointer;
-        }
-
-        /* ===== STATS SECTION ===== */
-        .stats-container {
-            display: none; width: min(420px, 100%);
-            display: flex; gap: 10px; margin-bottom: 20px;
-        }
-        .stat-card {
-            background: #1a1a1a; border: 1px solid #2a2a2a;
-            padding: 15px; border-radius: 12px; flex: 1; text-align: center;
-        }
+        .field input { width: 100%; padding: 12px; background: #222; border: 1px solid #2e2e2e; border-radius: 8px; color: #fff; outline: none; }
+        .login-btn { width: 100%; padding: 13px; background: #e04040; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stats-container { display: none; width: min(420px, 100%); gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: #1a1a1a; border: 1px solid #2a2a2a; padding: 15px; border-radius: 12px; flex: 1; text-align: center; }
         .stat-card small { color: #888; display: block; font-size: 11px; margin-bottom: 5px; }
         .stat-card span { color: #fff; font-size: 20px; font-weight: bold; }
-
-        /* ===== SCANNER PAGE ===== */
         .scanner-box { width: min(420px, 100%); text-align: center; }
         #reader { width: 100%; border-radius: 12px; border: 2px solid #2a2a2a; overflow: hidden; background: #000; }
-        
-        .result-card {
-            margin-top: 20px; padding: 18px; border-radius: 10px; display: none;
-        }
+        .result-card { margin-top: 20px; padding: 18px; border-radius: 10px; display: none; }
         .result-card.success { background: #0d2b1a; border: 1px solid #1a5c33; }
         .result-card.error   { background: #2b0d0d; border: 1px solid #5c1a1a; }
         .result-card.warning { background: #2b220d; border: 1px solid #5c4a1a; }
@@ -81,11 +36,7 @@
         .result-card.success .result-title { color: #4ade80; }
         .result-card.error   .result-title { color: #f87171; }
         .result-card.warning .result-title { color: #fbbf24; }
-
-        .logout-btn {
-            margin-top: 25px; background: none; border: none;
-            color: #555; cursor: pointer; text-decoration: underline;
-        }
+        .logout-btn { margin-top: 25px; background: none; border: none; color: #555; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -106,7 +57,7 @@
                 <label>Password</label>
                 <input type="password" id="org-password" placeholder="••••••••">
             </div>
-            <button class="login-btn" onclick="doLogin()">Submit</button>
+            <button class="login-btn" id="login-submit-btn" onclick="doLogin()">Submit</button>
             <div class="error-msg" id="login-error" style="color:red; display:none; margin-top:10px;">❌ Invalid credentials.</div>
         </div>
     </div>
@@ -133,10 +84,10 @@
             <div id="reader"></div>
 
             <div class="result-card" id="result-card">
-                <div class="icon" id="result-icon"></div>
+                <div class="icon" id="result-icon" style="font-size: 30px; margin-bottom: 5px;"></div>
                 <div class="result-title" id="result-title"></div>
                 <div class="result-sub" id="result-sub" style="color:#888;"></div>
-                <button style="margin-top:10px; padding:8px 15px;" onclick="scanAgain()">Scan Next</button>
+                <button style="margin-top:15px; padding:10px 20px; cursor:pointer;" onclick="scanAgain()">Scan Next Ticket</button>
             </div>
         </div>
 
@@ -146,30 +97,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
     <script>
+        // تأكدي أن الرابط لا ينتهي بـ /
         const BASE_URL = "https://unslumbery-hypereutectoid-vinnie.ngrok-free.dev";
-        let scanner = null;
+        let html5QrcodeScanner = null;
 
-        // 1. جلب الإحصائيات
         async function updateStats() {
             const token = localStorage.getItem('orgToken');
+            if (!token) return;
+
             try {
                 const res = await fetch(`${BASE_URL}/stats`, {
                     method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
                 });
-                const data = await res.json();
                 if (res.ok) {
+                    const data = await res.json();
                     document.getElementById('stats-container').style.display = 'flex';
-                    document.getElementById('total-attendees').innerText = data.total;
-                    document.getElementById('present-attendees').innerText = data.present;
+                    document.getElementById('total-attendees').innerText = data.total || 0;
+                    document.getElementById('present-attendees').innerText = data.present || 0;
                 }
-            } catch (err) { console.error("Stats Error:", err); }
+            } catch (err) {
+                console.warn("Stats fetch failed - probably connection issue.");
+            }
         }
 
-        // 2. تسجيل الدخول
         async function doLogin() {
             const email = document.getElementById('org-email').value.trim();
             const password = document.getElementById('org-password').value;
+            const btn = document.getElementById('login-submit-btn');
+
+            if (!email || !password) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            btn.innerText = "Connecting...";
+            btn.disabled = true;
 
             try {
                 const res = await fetch(`${BASE_URL}/organizer-login`, {
@@ -177,29 +143,47 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
+
                 const data = await res.json();
 
                 if (data.success) {
                     localStorage.setItem('orgToken', data.token);
-                    document.getElementById('login-page').classList.remove('active');
-                    document.getElementById('scanner-page').classList.add('active');
-                    updateStats();
-                    startScanner();
+                    showScannerPage();
                 } else {
                     document.getElementById('login-error').style.display = 'block';
+                    btn.innerText = "Submit";
+                    btn.disabled = false;
                 }
-            } catch(err) { alert("Server connection failed"); }
+            } catch(err) {
+                alert("Cannot connect to server. Check your Ngrok.");
+                btn.innerText = "Submit";
+                btn.disabled = false;
+            }
         }
 
-        // 3. تشغيل الماسح
+        function showScannerPage() {
+            document.getElementById('login-page').classList.remove('active');
+            document.getElementById('scanner-page').classList.add('active');
+            updateStats();
+            startScanner();
+        }
+
         function startScanner() {
-            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-            scanner.render(onScanSuccess, (err) => {});
+            // نستخدم هذا المعرّف لضمان عدم وجود تداخل
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+                html5QrcodeScanner.render(onScanSuccess, onScanError);
+            }
         }
 
-        // 4. عند نجاح المسح
         async function onScanSuccess(decodedText) {
-            scanner.pause();
+            // صمام أمان لإيقاف الكاميرا فقط إذا كانت تعمل
+            try {
+                if (html5QrcodeScanner) {
+                    await html5QrcodeScanner.clear(); // Clear بدلاً من pause لتجنب أخطاء الحالة
+                }
+            } catch (e) { console.log("Scanner already cleared"); }
+
             const token = localStorage.getItem('orgToken');
 
             try {
@@ -214,12 +198,6 @@
 
                 const data = await res.json();
                 
-                if (res.status === 401 || res.status === 403) {
-                    alert("Session expired. Please login again.");
-                    logout();
-                    return;
-                }
-
                 showResult({
                     success: data.status === 'success',
                     already_checked: data.status === 'warning',
@@ -227,12 +205,14 @@
                     message: data.message
                 });
 
-                // تحديث الأرقام فوراً بعد المسح الناجح
                 updateStats();
-
             } catch(err) {
-                showResult({ success: false, message: "Connection Error" });
+                showResult({ success: false, message: "Verification failed (Connection Error)" });
             }
+        }
+
+        function onScanError(err) {
+            // تجاهل أخطاء عدم العثور على QR في الفريم الواحد
         }
 
         function showResult(data) {
@@ -240,31 +220,35 @@
             const title = document.getElementById('result-title');
             const sub = document.getElementById('result-sub');
             const icon = document.getElementById('result-icon');
+            const readerDiv = document.getElementById('reader');
 
+            readerDiv.style.display = 'none';
             card.className = 'result-card';
             card.style.display = 'block';
 
             if (data.success) {
                 card.classList.add('success');
                 icon.innerText = "✅";
-                title.innerText = "Success!";
-                sub.innerText = "Welcome, " + (data.name || "");
+                title.innerText = "Success! Access Granted";
+                sub.innerText = "Welcome, " + (data.name || "Guest");
             } else if (data.already_checked) {
                 card.classList.add('warning');
                 icon.innerText = "⚠️";
                 title.innerText = "Already Entered";
-                sub.innerText = data.name + " is already inside.";
+                sub.innerText = data.name + " checked in earlier.";
             } else {
                 card.classList.add('error');
                 icon.innerText = "❌";
                 title.innerText = "Invalid Ticket";
-                sub.innerText = data.message || "Not found.";
+                sub.innerText = data.message || "Please check with the admin.";
             }
         }
 
         function scanAgain() {
             document.getElementById('result-card').style.display = 'none';
-            if (scanner) scanner.resume();
+            document.getElementById('reader').style.display = 'block';
+            html5QrcodeScanner = null; // إعادة تصفير الماسح
+            startScanner();
         }
 
         function logout() {
@@ -272,17 +256,11 @@
             location.reload();
         }
 
-        // جلب الإحصائيات إذا كان مسجل دخول مسبقاً
         window.onload = () => {
             if(localStorage.getItem('orgToken')) {
-                document.getElementById('login-page').classList.remove('active');
-                document.getElementById('scanner-page').classList.add('active');
-                updateStats();
-                startScanner();
+                showScannerPage();
             }
         }
     </script>
 </body>
-
 </html>
-
